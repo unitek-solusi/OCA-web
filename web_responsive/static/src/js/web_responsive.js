@@ -4,13 +4,16 @@
 odoo.define('web_responsive', function (require) {
     'use strict';
 
+    var ActionManager = require('web.ActionManager');
     var AbstractWebClient = require("web.AbstractWebClient");
     var AppsMenu = require("web.AppsMenu");
+    var BasicController = require('web.BasicController');
     var config = require("web.config");
     var core = require("web.core");
     var FormRenderer = require('web.FormRenderer');
     var Menu = require("web.Menu");
     var RelationalFields = require('web.relational_fields');
+    var Chatter = require('mail.Chatter');
 
     /**
      * Reduce menu data to a searchable format understandable by fuzzy.js
@@ -71,9 +74,11 @@ odoo.define('web_responsive', function (require) {
     AppsMenu.include({
         events: _.extend({
             "keydown .search-input input": "_searchResultsNavigate",
+            "input .search-input input": "_searchMenusSchedule",
             "click .o-menu-search-result": "_searchResultChosen",
             "shown.bs.dropdown": "_searchFocus",
             "hidden.bs.dropdown": "_searchReset",
+            "hide.bs.dropdown": "_hideAppsMenu",
         }, AppsMenu.prototype.events),
 
         /**
@@ -106,6 +111,16 @@ odoo.define('web_responsive', function (require) {
             this.$search_input = this.$(".search-input input");
             this.$search_results = this.$(".search-results");
             return this._super.apply(this, arguments);
+        },
+
+        /**
+         * Prevent the menu from being opened twice
+         * 
+         * @override
+         */
+        _onAppsMenuItemClicked: function (ev) {
+            this._super.apply(this, arguments);
+            ev.preventDefault();
         },
 
         /**
@@ -192,6 +207,7 @@ odoo.define('web_responsive', function (require) {
          */
         _searchResultChosen: function (event) {
             event.preventDefault();
+            event.stopPropagation();
             var $result = $(event.currentTarget),
                 text = $result.text().trim(),
                 data = $result.data(),
@@ -216,17 +232,15 @@ odoo.define('web_responsive', function (require) {
          * @param {jQuery.Event} event
          */
         _searchResultsNavigate: function (event) {
-            // Exit soon when not navigating results
-            if (this.$search_results.html().trim() === "") {
-                // Just in case it is the 1st search
-                this._searchMenusSchedule();
-                return;
-            }
             // Find current results and active element (1st by default)
             var all = this.$search_results.find(".o-menu-search-result"),
                 pre_focused = all.filter(".active") || $(all[0]),
                 offset = all.index(pre_focused),
                 key = event.key;
+            // Keyboard navigation only supports search results
+            if (!all.length) {
+                return;
+            }
             // Transform tab presses in arrow presses
             if (key === "Tab") {
                 event.preventDefault();
@@ -244,12 +258,8 @@ odoo.define('web_responsive', function (require) {
             case "ArrowDown":
                 offset++;
                 break;
-            // Other keys trigger a search
             default:
-                // All keys that write a character have length 1
-                if (key.length === 1 || key === "Backspace") {
-                    this._searchMenusSchedule();
-                }
+                // Other keys are useless in this event
                 return;
             }
             // Allow looping on results
@@ -268,6 +278,29 @@ odoo.define('web_responsive', function (require) {
                 },
             });
         },
+
+        /*
+        * Control if AppDrawer can be closed
+        */
+        _hideAppsMenu: function () {
+            return $('.oe_wait').length === 0 && !this.$('input').is(':focus');
+        },
+    });
+
+    BasicController.include({
+        
+        /**
+         * Close the AppDrawer if the data set is dirty and a discard dialog is opened
+         * 
+         * @override
+         */
+        canBeDiscarded: function (recordID) {
+            if (this.model.isDirty(recordID || this.handle)) {
+                $('.o_menu_apps .dropdown:has(.dropdown-menu.show) > a').dropdown('toggle');
+                $('.o_menu_sections li.show .dropdown-toggle').dropdown('toggle');
+            }
+            return this._super.apply(this, arguments);
+        },
     });
 
     Menu.include({
@@ -277,6 +310,8 @@ odoo.define('web_responsive', function (require) {
             // Opening any dropdown in the navbar should hide the hamburger
             "show.bs.dropdown .o_menu_systray, .o_menu_apps":
                 "_hideMobileSubmenus",
+            // Prevent close section menu
+            "hide.bs.dropdown .o_menu_sections": "_hideMenuSection",
         }, Menu.prototype.events),
 
         start: function () {
@@ -290,10 +325,20 @@ odoo.define('web_responsive', function (require) {
         _hideMobileSubmenus: function () {
             if (
                 this.$menu_toggle.is(":visible") &&
-                this.$section_placeholder.is(":visible")
+                this.$section_placeholder.is(":visible") &&
+                $('.oe_wait').length === 0
             ) {
                 this.$section_placeholder.collapse("hide");
             }
+        },
+
+        /**
+         * Hide Menu Section
+         *
+         * @returns {Boolean}
+         */
+        _hideMenuSection: function () {
+            return $('.oe_wait').length === 0;
         },
 
         /**
@@ -349,6 +394,51 @@ odoo.define('web_responsive', function (require) {
             ));
             $buttons.addClass("dropdown-menu").appendTo($dropdown);
             return $dropdown;
+        },
+    });
+
+    // Chatter Hide Composer
+    Chatter.include({
+        _openComposer: function (options) {
+            if (this._composer &&
+                    options.isLog === this._composer.options.isLog &&
+                    this._composer.$el.is(':visible')) {
+                this._closeComposer(false);
+            } else {
+                this._super.apply(this, arguments);
+            }
+        },
+    });
+
+    // Hide AppDrawer or Menu when the action has been completed
+    ActionManager.include({
+
+        /**
+        * Because the menu aren't closed when click, this method
+        * searchs for the menu with the action executed to close it.
+        *
+        * @param {action} action
+        * The executed action
+        */
+        _hideMenusByAction: function (action) {
+            var uniq_sel = '[data-action-id='+action.id+']';
+            // Need close AppDrawer?
+            $(_.str.sprintf(
+                '.o_menu_apps .dropdown:has(.dropdown-menu.show:has(%s)) > a',
+                uniq_sel)).dropdown('toggle');
+            // Need close Sections Menu?
+            // TODO: Change to 'hide' in modern Bootstrap >4.1
+            $(_.str.sprintf(
+                '.o_menu_sections li.show:has(%s) .dropdown-toggle', uniq_sel))
+                .dropdown('toggle');
+            // Need close Mobile?
+            $(_.str.sprintf('.o_menu_sections.show:has(%s)', uniq_sel))
+                .collapse('hide');
+        },
+
+        _handleAction: function (action) {
+            return this._super.apply(this, arguments).always(
+                $.proxy(this, '_hideMenusByAction', action));
         },
     });
 
