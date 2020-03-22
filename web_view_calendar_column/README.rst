@@ -1,5 +1,5 @@
 ========================
-web_action_conditionable
+Web View Calendar Column
 ========================
 
 .. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -14,10 +14,10 @@ web_action_conditionable
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-OCA%2Fweb-lightgray.png?logo=github
-    :target: https://github.com/OCA/web/tree/11.0/web_action_conditionable
+    :target: https://github.com/OCA/web/tree/11.0/web_view_calendar_column
     :alt: OCA/web
 .. |badge4| image:: https://img.shields.io/badge/weblate-Translate%20me-F47D42.png
-    :target: https://translation.odoo-community.org/projects/web-11-0/web-11-0-web_action_conditionable
+    :target: https://translation.odoo-community.org/projects/web-11-0/web-11-0-web_view_calendar_column
     :alt: Translate me on Weblate
 .. |badge5| image:: https://img.shields.io/badge/runbot-Try%20me-875A7B.png
     :target: https://runbot.odoo-community.org/runbot/162/11.0
@@ -25,8 +25,10 @@ web_action_conditionable
 
 |badge1| |badge2| |badge3| |badge4| |badge5| 
 
-This module was written to extend the functionality of actions in
-tree view (One2Many fields).
+This module allows to configure multiple columns on calendar daily views.
+
+This module only changes the daily view, weekly view and monthly view will
+not change.
 
 **Table of contents**
 
@@ -36,19 +38,14 @@ tree view (One2Many fields).
 Usage
 =====
 
-Odoo by default support:
+In order to define columns, we must access the action of the menu and edit the
+context.
+We should add the item column with the name of the field to use.
 
-::
-
-   <tree delete="false" create="false">
-
-with this module you can:
-
-::
-
-   <tree delete="state=='draft'" create="state!='sent'">
-
-It works in any tree view, so you can use it in One2many.
+If we want to define a set of options, we can use `force_columns` on the
+context.
+With the force column, we will define a dictionary with the field value as key
+and column name as value.
 
 Bug Tracker
 ===========
@@ -56,7 +53,7 @@ Bug Tracker
 Bugs are tracked on `GitHub Issues <https://github.com/OCA/web/issues>`_.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us smashing it by providing a detailed and welcomed
-`feedback <https://github.com/OCA/web/issues/new?body=module:%20web_action_conditionable%0Aversion:%2011.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
+`feedback <https://github.com/OCA/web/issues/new?body=module:%20web_view_calendar_column%0Aversion:%2011.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
 
 Do not contact contributors directly about support or help with technical issues.
 
@@ -66,14 +63,12 @@ Credits
 Authors
 ~~~~~~~
 
-* Cristian Salamea
+* Creu Blanca
 
 Contributors
 ~~~~~~~~~~~~
 
-* Cristian Salamea <cristian.salamea@gmail.com>
-* André Paramés <github@andreparames.com> (https://www.acsone.eu/)
-* Alexandre Díaz <alexandre.diaz@tecnativa.com>
+* Enric Tobella <etobella@creublanca.es>
 
 Maintainers
 ~~~~~~~~~~~
@@ -88,6 +83,6 @@ OCA, or the Odoo Community Association, is a nonprofit organization whose
 mission is to support the collaborative development of Odoo features and
 promote its widespread use.
 
-This module is part of the `OCA/web <https://github.com/OCA/web/tree/11.0/web_action_conditionable>`_ project on GitHub.
+This module is part of the `OCA/web <https://github.com/OCA/web/tree/11.0/web_view_calendar_column>`_ project on GitHub.
 
 You are welcome to contribute. To learn how please visit https://odoo-community.org/page/Contribute.
